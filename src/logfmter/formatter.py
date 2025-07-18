@@ -4,7 +4,7 @@ import numbers
 import traceback
 from contextlib import closing
 from types import TracebackType
-from typing import Dict, List, Optional, Tuple, Type, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
@@ -134,11 +134,28 @@ class Logfmter(logging.Formatter):
         """
         Return a dictionary of logger extra parameters by filtering any reserved keys.
         """
-        return {
-            cls.normalize_key(key): value
-            for key, value in record.__dict__.items()
-            if key not in RESERVED
-        }
+        extras = dict()
+        for key, value in record.__dict__.items():
+            key = cls.normalize_key(key)
+            if key in RESERVED:
+                continue
+            if isinstance(value, dict):
+                extras.update(cls.flatten_dict(value, key))
+            else:
+                extras[key] = value
+        return extras
+
+    @classmethod
+    def flatten_dict(cls, d: dict, parent_key: str = "") -> dict[str, Any]:
+        items = []
+        for key, value in d.items():
+            key = cls.normalize_key(key)
+            new_key = f"{parent_key}.{key}" if parent_key else key
+            if isinstance(value, dict):
+                items.extend(cls.flatten_dict(value, new_key).items())
+            else:
+                items.append([new_key, value])
+        return dict(items)
 
     def __init__(
         self,
@@ -158,9 +175,7 @@ class Logfmter(logging.Formatter):
             record.asctime = self.formatTime(record, self.datefmt)
 
         if isinstance(record.msg, dict):
-            params = {
-                self.normalize_key(key): value for key, value in record.msg.items()
-            }
+            params = self.flatten_dict(record.msg)
         else:
             params = {"msg": record.getMessage()}
 
@@ -175,7 +190,6 @@ class Logfmter(logging.Formatter):
         # available under a different attribute name, then the formatter's mapping will
         # be used to lookup these attributes. e.g. 'at' from 'levelname'
         for key in self.keys:
-
             attribute = key
 
             # If there is a mapping for this key's attribute, then use it to lookup
