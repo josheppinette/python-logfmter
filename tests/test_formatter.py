@@ -102,7 +102,21 @@ def test_normalize_key(value, expected):
 
 @pytest.mark.parametrize(
     "record,expected",
-    [({"msg": "test"}, {}), ({"value": 1}, {"value": 1})],
+    [
+        # No extras
+        ({"msg": "test"}, {}),
+        # Regular extra
+        ({"value": 1}, {"value": 1}),
+        # Nested extras
+        ({"foo": {"bar": "baz"}}, {"foo.bar": "baz"}),
+        # Regular and nested
+        ({"value": 1, "foo": {"bar": "baz"}}, {"value": 1, "foo.bar": "baz"}),
+        # Multiple nested under one
+        (
+            {"foo": {"bar": "baz", "joe": "smith"}},
+            {"foo.bar": "baz", "foo.joe": "smith"},
+        ),
+    ],
 )
 def test_get_extra(record, expected):
     # Generate a real `logging.LogRecord` from the provided dictionary.
