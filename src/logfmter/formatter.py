@@ -1,8 +1,6 @@
-import io
 import logging
 import numbers
 import traceback
-from contextlib import closing
 from types import TracebackType
 from typing import Dict, List, Optional, Tuple, Type, cast
 
@@ -88,14 +86,8 @@ class Logfmter(logging.Formatter):
             except Exception:
                 logging.exception()
         """
-        _type, exc, tb = exc_info
-
-        with closing(io.StringIO()) as sio:
-            traceback.print_exception(_type, exc, tb, None, sio)
-            value = sio.getvalue()
-
         # Tracebacks have a single trailing newline that we don't need.
-        value = value.rstrip("\n")
+        value = "".join(traceback.format_exception(*exc_info)).rstrip("\n")
 
         return cls.format_string(value)
 
