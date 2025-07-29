@@ -216,18 +216,13 @@ logging.error({"example": True}) # at=ERROR example=yes
 
 **Default Key/Value Pairs**
 
-Instead of providing key/value pairs at each log call, you can override
-the log record factory to provide defaults:
+Instead of providing key/value pairs at each log call, you can setup
+the formatter to provide defaults:
 
 ```py
-_record_factory = logging.getLogRecordFactory()
+from logfmter import Logfmter
 
-def record_factory(*args, **kwargs):
-    record = _record_factory(*args, **kwargs)
-    record.trace_id = 123
-    return record
-
-logging.setLogRecordFactory(record_factory)
+formatter = Logfmter(default_extra={"trace_id": 123})
 ```
 
 This will cause all logs to have the `trace_id=123` pair regardless of including

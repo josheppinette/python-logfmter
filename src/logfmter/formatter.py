@@ -136,12 +136,18 @@ class Logfmter(logging.Formatter):
         self,
         keys: List[str] = ["at"],
         mapping: Dict[str, str] = {"at": "levelname"},
+        default_extra: Optional[Dict[str, str]] = None,
         datefmt: Optional[str] = None,
     ):
         self.keys = [self.normalize_key(key) for key in keys]
         self.mapping = {
             self.normalize_key(key): value for key, value in mapping.items()
         }
+        self.default_extra = (
+            {self.normalize_key(key): value for key, value in default_extra.items()}
+            if default_extra is not None
+            else {}
+        )
         self.datefmt = datefmt
 
     def format(self, record: logging.LogRecord) -> str:
@@ -156,6 +162,7 @@ class Logfmter(logging.Formatter):
         else:
             params = {"msg": record.getMessage()}
 
+        params.update(self.default_extra)
         params.update(self.get_extra(record))
 
         tokens = []

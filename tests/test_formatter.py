@@ -266,3 +266,34 @@ def test_extra_keys(record):
     assert (
         Logfmter(keys=["at", "attr"]).format(record) == "at=INFO msg=alpha attr=value"
     )
+
+
+@pytest.mark.parametrize(
+    "default_extra,record,expected",
+    [
+        # When a parameter is present in the default_extra it should be emitted
+        (
+            {"extra1": "from_formatter"},
+            {"levelname": "INFO", "msg": "test"},
+            "at=INFO msg=test extra1=from_formatter",
+        ),
+        # When a parameter is present in the default_extra and also in the record
+        # the record value should take precedence
+        (
+            {"extra1": "from_formatter"},
+            {"levelname": "INFO", "extra1": "from_record", "msg": "test"},
+            "at=INFO msg=test extra1=from_record",
+        ),
+    ],
+)
+def test_format_default_extra(default_extra, record, expected):
+    """
+    If the `default_extra` parameter is specified in the formatter then all log
+    records must include such parameters.
+    """
+
+    # Generate a real `logging.LogRecord` from the provided dictionary.
+    record = logging.makeLogRecord(record)
+    formatter = Logfmter(keys=["at", "extra1"], default_extra=default_extra)
+
+    assert formatter.format(record) == expected
