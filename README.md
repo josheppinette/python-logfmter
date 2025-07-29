@@ -243,6 +243,10 @@ If you are using [nix](https://zero-to-nix.com/start/install/) & [direnv](https:
 - [git](https://git-scm.com/)
 - [pyenv](https://github.com/pyenv/pyenv#installation)
 
+> Additionally, if you aren't using nix, then you will need to manually build
+> the "external" tools found in `external`. These are used during testing to
+> verify compatibility with libraries from different ecosystems. Alternatively, you can exclude those tests with `pytest -m "not external"`, but this is not recommended.
+
 ## Getting Started
 
 **Setup**

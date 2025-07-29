@@ -1,5 +1,6 @@
 import logging
 import re
+import subprocess
 import sys
 from datetime import datetime
 
@@ -7,25 +8,47 @@ import pytest
 
 from logfmter.formatter import Logfmter
 
+STRING_ESCAPE_RULES = [
+    # If the string contains a space, then it must be quoted.
+    (" ", '" "'),
+    # If the string contains a equals sign, then it must be quoted.
+    ("=", '"="'),
+    # All double quotes must be escaped.
+    ('"', '"\\""'),
+    # If the string requires escaping and quoting, then both
+    # operations should be performed.
+    (' "', '" \\""'),
+    # If the string is empty, then it should be left empty.
+    ("", ""),
+    # If the string contains a newline, then it should be escaped.
+    ("\n", "\\n"),
+    ("\n\n", "\\n\\n"),
+    # If the string contains a backslash and needs to be quoted, then
+    # the backslashes need to be escaped.
+    ("\\", "\\"),
+    ("\\ ", '"\\\\ "'),
+    ('\\"', '"\\\\\\""'),
+]
+
+TYPE_CONVERSION_RULES = [
+    # None values will be converted to an empty string.
+    (None, ""),
+    # True values will be converted to "true".
+    (True, "true"),
+    # False values wll be converted to "false".
+    (False, "false"),
+    # Numbers will be converted to their string representation.
+    (1, "1"),
+    # Strings will be passed through the `format_string` function.
+    ("=", '"="'),
+    # Objects will be converted to their string representation using `str`.
+    (Exception("="), '"="'),
+]
+
 
 @pytest.mark.parametrize(
     "value,expected",
-    [
-        # If the string contains a space, then it must be quoted.
-        (" ", '" "'),
-        # If the string contains a equals sign, then it must be quoted.
-        ("=", '"="'),
-        # All double quotes must be escaped.
-        ('"', '\\"'),
-        # If the string requires escaping and quoting, then both
-        # operations should be performed.
-        (' "', '" \\""'),
-        # If the string is empty, then it should be quoted.
-        ("", '""'),
-        # If the string contains a newline, then it should be escaped.
-        ("\n", "\\n"),
-        ("\n\n", "\\n\\n"),
-    ],
+    STRING_ESCAPE_RULES,
 )
 def test_format_string(value, expected):
     assert Logfmter.format_string(value) == expected
@@ -33,20 +56,7 @@ def test_format_string(value, expected):
 
 @pytest.mark.parametrize(
     "value,expected",
-    [
-        # None values will be converted to an empty string.
-        (None, ""),
-        # True values will be converted to "true".
-        (True, "true"),
-        # False values wll be converted to "false".
-        (False, "false"),
-        # Numbers will be converted to their string representation.
-        (1, "1"),
-        # Strings will be passed through the `format_string` function.
-        ("=", '"="'),
-        # Objects will be converted to their string representation using `str`.
-        (Exception("="), '"="'),
-    ],
+    TYPE_CONVERSION_RULES,
 )
 def test_format_value(value, expected):
     assert Logfmter.format_value(value) == expected
@@ -266,3 +276,29 @@ def test_extra_keys(record):
     assert (
         Logfmter(keys=["at", "attr"]).format(record) == "at=INFO msg=alpha attr=value"
     )
+
+
+@pytest.mark.external
+@pytest.mark.parametrize(
+    "value",
+    [x[0] for x in TYPE_CONVERSION_RULES + STRING_ESCAPE_RULES],
+)
+def test_external_tools_compatibility(value):
+    """
+    Verify that the logfmt output can be parsed and identically
+    reformatted by external tools.
+    """
+    record = logging.makeLogRecord({"msg": {"foo": value}, "levelname": "INFO"})
+
+    formatted = Logfmter(keys=["at"]).format(record)
+
+    result = subprocess.run(
+        ["golang-logfmt-echo"],
+        input=formatted,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, formatted
+    assert len(result.stdout.splitlines()) == 1, formatted
+    assert result.stdout.splitlines()[0] == formatted

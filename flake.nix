@@ -9,7 +9,14 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [
+            (final: prev: {
+              golang-logfmt-echo = prev.callPackage ./external/golang-logfmt-echo { };
+            })
+          ];
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -19,6 +26,9 @@
             pkgs.python311
             pkgs.python312
             pkgs.python313
+
+            # external
+            pkgs.golang-logfmt-echo
           ];
           shellHook = "unset PYTHONPATH";
         };
