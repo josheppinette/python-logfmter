@@ -218,6 +218,33 @@ This will cause all logs to have the `trace_id=123` pair regardless of including
 
 > Note, the defaults object uses format strings as values. This allows for variables templating. See "Aliases" guide for more information.
 
+**ignored_keys**
+
+Sometimes log records include fields that you don't want in your output.
+This often happens when other libraries or frameworks add extra keys to the `LogRecord` that are not relevant to your log format.
+
+You can explicitly exclude unwanted keys by using the `ignored_keys` parameter.
+
+```py
+import logging
+from logfmter import Logfmter
+
+formatter = Logfmter(
+    keys=["at"],
+    mapping={"at": "levelname"},
+    datefmt="%Y-%m-%d",
+    ignored_keys=["color_message"],
+)
+
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+
+logging.basicConfig(handlers=[handler])
+
+logging.info("Started server process [%s]", 97819, extra={"color_message": "Started server process [%d]"})
+# at=INFO msg="Started server process [97819]"
+```
+
 ## Extension
 
 You can subclass the formatter to change its behavior.
