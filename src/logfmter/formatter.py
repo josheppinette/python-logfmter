@@ -1,8 +1,14 @@
+# SPDX-FileCopyrightText: 2022-2025 Joshua Taylor Eppinette
+# SPDX-License-Identifier: MIT
+"""A python-logging compatible logfmt structured logging formatter."""
+
 import logging
 import numbers
 import traceback
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Tuple, Type, cast
+
+__all__ = ("Logfmter",)
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
@@ -38,6 +44,8 @@ RESERVED: Tuple[str, ...] = (
 
 
 class Logfmter(logging.Formatter):
+    """Formatter realizing the logfmt format."""
+
     @classmethod
     def format_string(cls, value: str) -> str:
         """
