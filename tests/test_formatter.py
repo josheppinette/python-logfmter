@@ -2,6 +2,7 @@ import logging
 import re
 import subprocess
 import sys
+import traceback
 from datetime import datetime
 
 import pytest
@@ -125,6 +126,21 @@ def test_get_extra(record, expected):
     assert Logfmter.get_extra(record) == expected
 
 
+try:
+    int("a")
+except ValueError:
+    exc_info = sys.exc_info()
+    st = traceback.format_stack(limit=1)
+    stack_info = "".join(["Stack (most recent call last)\n", *st])
+    stack_info_tb = stack_info.rstrip("\n").replace("\n", "\\n").replace('"', '\\"')
+    exc_info_tb = (
+        "".join(traceback.format_exception(*exc_info))
+        .rstrip("\n")
+        .replace("\n", "\\n")
+        .replace('"', '\\"')
+    )
+
+
 @pytest.mark.parametrize(
     "record,expected",
     [
@@ -147,17 +163,21 @@ def test_get_extra(record, expected):
             {
                 "levelname": "INFO",
                 "msg": "alpha",
-                "exc_info": (
-                    Exception,
-                    Exception("alpha"),
-                    None,
-                ),  # We don't pass a traceback, because they are difficult to fake.
+                "exc_info": exc_info,
             },
-            'at=INFO msg=alpha exc_info="Exception: alpha"',
+            f'at=INFO msg=alpha exc_info="{exc_info_tb}"',
         ),
         # If, for some odd reason, someone passes in an empty msg dictionary. It
         # should be properly formatted without extra spaces.
         ({"levelname": "INFO", "msg": {}}, "at=INFO"),
+        (
+            {
+                "levelname": "INFO",
+                "msg": {},
+                "stack_info": stack_info,
+            },
+            f'at=INFO stack_info="{stack_info_tb}"',
+        ),
     ],
 )
 def test_format_default(record, expected):
@@ -215,7 +235,6 @@ def test_format_provided_keys(keys, mapping, record, expected):
     then it should be added as a parameter. Any provided mapping should also
     be utilized.
     """
-
     # Generate a real `logging.LogRecord` from the provided dictionary.
     record = logging.makeLogRecord(record)
 
@@ -308,6 +327,7 @@ def test_external_tools_compatibility(value):
 
     result = subprocess.run(
         ["golang-logfmt-echo"],
+        check=False,
         input=formatted,
         capture_output=True,
         text=True,
@@ -319,30 +339,72 @@ def test_external_tools_compatibility(value):
 
 
 @pytest.mark.parametrize(
-    "record",
+    "record,expected",
     [
-        {
-            "msg": "alpha",
-            "levelname": "INFO",
-            "funcName": "test_defaults",
-            "module": "test_formatter",
-            "lineno": "324",
-        },
-        {
-            "msg": {"msg": "alpha"},
-            "levelname": "INFO",
-            "funcName": "test_defaults",
-            "module": "test_formatter",
-            "lineno": "324",
-        },
+        (
+            {
+                "msg": "alpha",
+                "levelname": "INFO",
+                "func": "funky",
+                "funcName": "test_defaults",
+                "module": "test_formatter",
+                "lineno": "324",
+            },
+            "at=INFO msg=alpha func=funky",
+        ),
+        (
+            {
+                "msg": "alpha",
+                "levelname": "INFO",
+                "funcName": "test_defaults",
+                "module": "test_formatter",
+                "lineno": "324",
+            },
+            "at=INFO func=test_formatter.test_defaults:324 msg=alpha",
+        ),
+        (
+            {
+                "msg": {"msg": "alpha"},
+                "levelname": "INFO",
+                "funcName": "test_defaults",
+                "module": "test_formatter",
+                "lineno": "324",
+            },
+            "at=INFO func=test_formatter.test_defaults:324 msg=alpha",
+        ),
+        # check if defaults formatter doesn't print the inherited stack_info / exc_info
+        (
+            {
+                "msg": "alpha",
+                "levelname": "INFO",
+                "funcName": "test_defaults",
+                "module": "test_formatter",
+                "lineno": "324",
+                "exc_info": exc_info,
+            },
+            "at=INFO func=test_formatter.test_defaults:324 msg=alpha "
+            f'exc_info="{exc_info_tb}"',
+        ),
+        (
+            {
+                "msg": {"msg": "alpha"},
+                "levelname": "INFO",
+                "funcName": "test_defaults",
+                "module": "test_formatter",
+                "lineno": "324",
+                "stack_info": stack_info,
+            },
+            "at=INFO func=test_formatter.test_defaults:324 msg=alpha "
+            f'stack_info="{stack_info_tb}"',
+        ),
     ],
 )
-def test_defaults(record):
+def test_defaults(record, expected):
     record = logging.makeLogRecord(record)
 
     assert (
         Logfmter(
             keys=["at", "func"], defaults={"func": "{module}.{funcName}:{lineno}"}
         ).format(record)
-        == "at=INFO func=test_formatter.test_defaults:324 msg=alpha"
+        == expected
     )
