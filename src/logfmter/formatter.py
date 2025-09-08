@@ -236,6 +236,9 @@ class Logfmter(logging.Formatter):
             else:
                 continue
 
+            if isinstance(value, dict):
+                continue
+
             tokens.append("{}={}".format(key, self.format_value(value)))
 
         formatted_params = self.format_params(params)
