@@ -141,28 +141,28 @@ class Logfmter(logging.Formatter):
 
         return key.replace(" ", "_").replace("\n", "\\n")
 
-    @classmethod
-    def get_extra(cls, record: logging.LogRecord) -> dict:
+    def get_extra(self, record: logging.LogRecord) -> dict:
         """
         Return a dictionary of logger extra parameters by filtering any reserved keys.
         """
         extras = {}
 
         for key, value in record.__dict__.items():
-            key = cls.normalize_key(key)
+            if key in self.ignored_keys:
+                continue
+            key = self.normalize_key(key)
 
             if key in RESERVED:
                 continue
 
             if isinstance(value, dict):
-                extras.update(cls.flatten_dict(value, key))
+                extras.update(self.flatten_dict(value, key))
             else:
                 extras[key] = value
 
         return extras
 
-    @classmethod
-    def flatten_dict(cls, v: dict, root: str = "") -> dict[str, Any]:
+    def flatten_dict(self, v: dict, root: str = "") -> dict[str, Any]:
         """
         Return a dictionary whereby the input dictionary is converted to
         depth equal to one with keys that are joined via periods.
@@ -170,10 +170,15 @@ class Logfmter(logging.Formatter):
         flattened = {}
 
         for key, value in v.items():
-            key = f"{root}.{cls.normalize_key(key)}" if root else cls.normalize_key(key)
+            key = (
+                f"{root}.{self.normalize_key(key)}" if root else self.normalize_key(key)
+            )
+
+            if key in self.ignored_keys:
+                continue
 
             if isinstance(value, dict):
-                flattened.update(cls.flatten_dict(value, key))
+                flattened.update(self.flatten_dict(value, key))
             else:
                 flattened[key] = value
 
@@ -185,6 +190,7 @@ class Logfmter(logging.Formatter):
         mapping: Dict[str, str] = {"at": "levelname"},
         datefmt: Optional[str] = None,
         defaults: Optional[Dict[str, str]] = None,
+        ignored_keys: Optional[List[str]] = None,
     ):
         self.keys = [self.normalize_key(key) for key in keys]
         self.mapping = {
@@ -195,6 +201,7 @@ class Logfmter(logging.Formatter):
             key: _DefaultFormatter(value, style="{")
             for key, value in (defaults or {}).items()
         }
+        self.ignored_keys = ignored_keys or []
 
     def format(self, record: logging.LogRecord) -> str:
         # If the 'asctime' attribute will be used, then generate it.
@@ -203,6 +210,8 @@ class Logfmter(logging.Formatter):
 
         if isinstance(record.msg, dict):
             params = self.flatten_dict(record.msg)
+        elif "msg" in self.ignored_keys:
+            params = {}
         else:
             params = {"msg": record.getMessage()}
 
@@ -218,6 +227,9 @@ class Logfmter(logging.Formatter):
         # be used to lookup these attributes. e.g. 'at' from 'levelname'
         for key in self.keys:
             attribute = key
+
+            if key in self.ignored_keys:
+                continue
 
             # If there is a mapping for this key's attribute, then use it to lookup
             # the key's value.
@@ -242,7 +254,7 @@ class Logfmter(logging.Formatter):
         if formatted_params:
             tokens.append(formatted_params)
 
-        if record.exc_info:
+        if record.exc_info and "exc_info" not in self.ignored_keys:
             # Cast exc_info to its not null variant to make mypy happy.
             exc_info = cast(ExcInfo, record.exc_info)
             tokens.append(f"exc_info={self.format_exc_info(exc_info)}")
