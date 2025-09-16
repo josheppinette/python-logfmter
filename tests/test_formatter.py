@@ -69,7 +69,9 @@ def test_format_exc_info():
     except Exception:
         exc_info = sys.exc_info()
 
-    value = Logfmter().format_exc_info(exc_info)
+    record = logging.makeLogRecord({"msg": "Error", "exc_info": exc_info})
+    value = Logfmter().format(record)
+    _prefix, _, value = value.partition("exc_info=")
 
     assert value.startswith('"') and value.endswith('"')
 
