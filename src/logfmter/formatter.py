@@ -186,11 +186,11 @@ class Logfmter(logging.Formatter):
         datefmt: Optional[str] = None,
         defaults: Optional[Dict[str, str]] = None,
     ):
+        super().__init__("%(message)s", datefmt)
         self.keys = [self.normalize_key(key) for key in keys]
         self.mapping = {
             self.normalize_key(key): value for key, value in mapping.items()
         }
-        self.datefmt = datefmt
         self.defaults = {
             key: _DefaultFormatter(value, style="{")
             for key, value in (defaults or {}).items()
@@ -198,8 +198,9 @@ class Logfmter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         # If the 'asctime' attribute will be used, then generate it.
-        if "asctime" in self.keys or "asctime" in self.mapping.values():
-            record.asctime = self.formatTime(record, self.datefmt)
+        if not hasattr(record, "asctime"):
+            if "asctime" in self.keys or "asctime" in self.mapping.values():
+                record.asctime = self.formatTime(record, self.datefmt)
 
         if isinstance(record.msg, dict):
             params = self.flatten_dict(record.msg)
