@@ -311,6 +311,52 @@ def test_extra_keys(record):
     )
 
 
+@pytest.mark.parametrize(
+    "record,expected",
+    [
+        (
+            {
+                "msg": {"msg": "alpha"},
+                "levelname": "INFO",
+                "foo": {"bar": "baz", "blub": "blah"},
+            },
+            "at=INFO msg=alpha foo.bar=baz foo.blub=blah",
+        ),
+        (
+            {
+                "msg": "alpha",
+                "levelname": "INFO",
+                "foo": {"bar": "baz", "blub": "blah"},
+                "foo.bar": "XXX",
+            },
+            "at=INFO msg=alpha foo.bar=XXX foo.blub=blah",
+        ),
+        (
+            {
+                "msg": {"msg": "alpha", "foo": {"bar": "baz", "blub": "blah"}},
+                "levelname": "INFO",
+            },
+            "at=INFO msg=alpha foo.bar=baz foo.blub=blah",
+        ),
+        (
+            {
+                "msg": {
+                    "msg": "alpha",
+                    "foo": {"bar": "baz", "blub": "blah"},
+                    "foo.bar": "XXX",
+                },
+                "levelname": "INFO",
+            },
+            "at=INFO msg=alpha foo.bar=XXX foo.blub=blah",
+        ),
+    ],
+)
+def test_format_nested_keys(record, expected):
+    record = logging.makeLogRecord(record)
+    assert Logfmter(keys=["at", "foo"]).format(record) == expected
+    assert Logfmter(keys=["at"]).format(record) == expected
+
+
 @pytest.mark.external
 @pytest.mark.parametrize(
     "value",
