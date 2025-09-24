@@ -61,7 +61,12 @@ class Logfmter(logging.Formatter):
         """
         needs_dquote_escaping = '"' in value
         needs_newline_escaping = "\n" in value
-        needs_quoting = " " in value or "=" in value or needs_dquote_escaping
+        needs_quoting = (
+            " " in value
+            or "=" in value
+            or needs_dquote_escaping
+            or needs_newline_escaping
+        )
         needs_backslash_escaping = "\\" in value and needs_quoting
 
         if needs_backslash_escaping:
