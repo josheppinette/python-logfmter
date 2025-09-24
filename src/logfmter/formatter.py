@@ -1,6 +1,5 @@
 import logging
 import numbers
-import traceback
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
@@ -91,25 +90,6 @@ class Logfmter(logging.Formatter):
             return str(value)
 
         return cls.format_string(str(value))
-
-    @classmethod
-    def format_exc_info(cls, exc_info: ExcInfo) -> str:
-        """
-        Format the provided exc_info into a logfmt formatted string.
-
-        This function should only be used to format exceptions which are
-        currently being handled. Not with those exceptions which are
-        manually passed into the logger. For example:
-
-            try:
-                raise Exception()
-            except Exception:
-                logging.exception()
-        """
-        # Tracebacks have a single trailing newline that we don't need.
-        value = "".join(traceback.format_exception(*exc_info)).rstrip("\n")
-
-        return cls.format_string(value)
 
     @classmethod
     def format_params(cls, params: dict) -> str:
@@ -246,10 +226,13 @@ class Logfmter(logging.Formatter):
         if formatted_params:
             tokens.append(formatted_params)
 
-        if record.exc_info:
+        if record.exc_info and not record.exc_text:
             # Cast exc_info to its not null variant to make mypy happy.
             exc_info = cast(ExcInfo, record.exc_info)
-            tokens.append(f"exc_info={self.format_exc_info(exc_info)}")
+            record.exc_text = self.formatException(exc_info)
+
+        if record.exc_text:
+            tokens.append(f"exc_info={self.format_string(record.exc_text)}")
 
         if record.stack_info:
             stack_info = self.formatStack(record.stack_info).rstrip("\n")
