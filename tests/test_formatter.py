@@ -22,8 +22,8 @@ STRING_ESCAPE_RULES = [
     # If the string is empty, then it should be left empty.
     ("", ""),
     # If the string contains a newline, then it should be escaped.
-    ("\n", "\\n"),
-    ("\n\n", "\\n\\n"),
+    ("\n", '"\\n"'),
+    ("\n\n", '"\\n\\n"'),
     # If the string contains a backslash and needs to be quoted, then
     # the backslashes need to be escaped.
     ("\\", "\\"),
