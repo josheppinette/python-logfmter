@@ -456,3 +456,67 @@ def test_defaults(record, expected):
         ).format(record)
         == expected
     )
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"msg": "alpha", "levelname": "INFO", "foo": "bar"},
+        {"msg": {"msg": "alpha", "foo": "bar"}, "levelname": "INFO"},
+    ],
+)
+def test_ignored_keys(record):
+    record = logging.makeLogRecord(record)
+    record.attr = "value"
+
+    assert (
+        Logfmter(keys=["at", "attr"], ignored_keys=["foo"]).format(record)
+        == "at=INFO msg=alpha attr=value"
+    )
+    assert (
+        Logfmter(keys=["at", "attr"], ignored_keys=["attr"]).format(record)
+        == "at=INFO msg=alpha foo=bar"
+    )
+    assert (
+        Logfmter(keys=["at", "attr"], ignored_keys=["msg"]).format(record)
+        == "at=INFO foo=bar attr=value"
+    )
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"msg": "alpha", "levelname": "INFO", "foo": {"key1": "val1", "key2": "val2"}},
+        {
+            "msg": {"msg": "alpha", "foo": {"key1": "val1", "key2": "val2"}},
+            "levelname": "INFO",
+        },
+    ],
+)
+def test_ignored_keys_nested(record):
+    record = logging.makeLogRecord(record)
+
+    assert (
+        Logfmter(keys=["at"], ignored_keys=[]).format(record)
+        == "at=INFO msg=alpha foo.key1=val1 foo.key2=val2"
+    )
+
+    assert (
+        Logfmter(keys=["at", "foo"], ignored_keys=["foo"]).format(record)
+        == "at=INFO msg=alpha"
+    )
+
+    assert (
+        Logfmter(keys=["at"], ignored_keys=["foo"]).format(record)
+        == "at=INFO msg=alpha"
+    )
+
+    assert (
+        Logfmter(keys=["at"], ignored_keys=["foo.key1"]).format(record)
+        == "at=INFO msg=alpha foo.key2=val2"
+    )
+
+    assert (
+        Logfmter(keys=["at", "foo"], ignored_keys=["foo.key1"]).format(record)
+        == "at=INFO msg=alpha foo.key2=val2"
+    )

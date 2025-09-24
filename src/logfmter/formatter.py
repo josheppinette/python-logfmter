@@ -170,6 +170,7 @@ class Logfmter(logging.Formatter):
         mapping: Dict[str, str] = {"at": "levelname"},
         datefmt: Optional[str] = None,
         defaults: Optional[Dict[str, str]] = None,
+        ignored_keys: Optional[List[str]] = None,
     ):
         super().__init__("%(message)s", datefmt)
         self.keys = [self.normalize_key(key) for key in keys]
@@ -180,6 +181,7 @@ class Logfmter(logging.Formatter):
             key: _DefaultFormatter(value, style="{")
             for key, value in (defaults or {}).items()
         }
+        self.ignored_keys = ignored_keys or []
 
     def format(self, record: logging.LogRecord) -> str:
         # If the 'asctime' attribute will be used, then generate it.
@@ -227,19 +229,30 @@ class Logfmter(logging.Formatter):
 
             tokens.append("{}={}".format(key, self.format_value(value)))
 
-        formatted_params = self.format_params(params)
+        formatted_params = self.format_params(
+            {
+                k: v
+                for k, v in params.items()
+                if k not in self.ignored_keys
+                and k.split(".", 1)[0] not in self.ignored_keys
+            }
+        )
         if formatted_params:
             tokens.append(formatted_params)
 
-        if record.exc_info and not record.exc_text:
+        if (
+            record.exc_info
+            and not record.exc_text
+            and "exc_info" not in self.ignored_keys
+        ):
             # Cast exc_info to its not null variant to make mypy happy.
             exc_info = cast(ExcInfo, record.exc_info)
             record.exc_text = self.formatException(exc_info)
 
-        if record.exc_text:
+        if record.exc_text and "exc_info" not in self.ignored_keys:
             tokens.append(f"exc_info={self.format_string(record.exc_text)}")
 
-        if record.stack_info:
+        if record.stack_info and "stack_info" not in self.ignored_keys:
             stack_info = self.formatStack(record.stack_info).rstrip("\n")
             tokens.append(f"stack_info={self.format_string(stack_info)}")
 
