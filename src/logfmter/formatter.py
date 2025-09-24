@@ -1,7 +1,8 @@
 import logging
 import numbers
+import shlex
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
@@ -40,6 +41,45 @@ QUOTE_CHARS = str.maketrans(
 )
 REPLACEMENTS = {chr(c): f"\\u{c:04x}" for c in list(range(0x20)) + [0x7F]}
 REPLACEMENTS.update({"\n": "\\n", "\t": "\\t", "\r": "\\r"})
+
+
+def parse_logfmt(
+    line: str, aliases: Optional[Dict[str, str]] = None, convert_numeric: bool = False
+) -> Dict[str, Union[str, int, float]]:
+    """
+    Parse a logfmt formatted string.
+
+    Raises ValueError on parsing errors.
+    """
+    aliases = aliases or {}
+    fields = {}
+
+    if "\n" in line:
+        # TODO: be strict. Don't parse what we don't produce?!
+        raise ValueError()
+
+    lexer = shlex.shlex(line, posix=True)
+    lexer.quotes = '"'
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    for token in lexer:
+        value: Union[str, int, float]
+        key, _, value = token.partition("=")
+        key = aliases.get(key, key)
+        for replacement, string in REPLACEMENTS.items():
+            value = value.replace(string, replacement)
+        if convert_numeric and value.isdigit():
+            value = int(value)
+        elif (
+            convert_numeric
+            and value.count(".") == 1
+            and value.replace(".", "").isdigit()
+        ):
+            value = float(value)
+        if not key:
+            raise ValueError()
+        fields[key] = value
+    return fields
 
 
 class _DefaultFormatter(logging.Formatter):
