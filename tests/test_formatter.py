@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 
-from logfmter.formatter import Logfmter
+from logfmter.formatter import Logfmter, parse_logfmt
 
 STRING_ESCAPE_RULES = [
     # If the string contains a space, then it must be quoted.
@@ -26,6 +26,7 @@ STRING_ESCAPE_RULES = [
     ("\t", '"\\t"'),
     # All other control chars must be escaped and quoted
     ("\x07", r'"\u0007"'),
+    ("\x7f", r'"\u007f"'),
     (
         "".join(chr(c) for c in range(0x20) if chr(c) not in "\t\n\r"),
         r'"\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u000b\u000c\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"',
@@ -375,7 +376,15 @@ def test_format_nested_keys(record, expected):
 @pytest.mark.external
 @pytest.mark.parametrize(
     "value",
-    [x[0] for x in TYPE_CONVERSION_RULES + STRING_ESCAPE_RULES],
+    [x[0] for x in TYPE_CONVERSION_RULES + STRING_ESCAPE_RULES if x[0] != "\x7f"]
+    + [
+        pytest.param(
+            "\x7f",
+            marks=pytest.mark.xfail(
+                reason="https://github.com/go-logfmt/logfmt/pull/17"
+            ),
+        )
+    ],
 )
 def test_external_tools_compatibility(value):
     """
@@ -538,3 +547,131 @@ def test_ignored_keys_nested(record):
         Logfmter(keys=["at", "foo"], ignored_keys=["foo.key1"]).format(record)
         == "at=INFO msg=alpha foo.key2=val2"
     )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"at": "INFO"},
+        {"levelname": "INFO", "a": "1"},
+        {"at": "INFO", "msg": "test", "a": "1"},
+        {"at": "INFO", "msg": "="},
+        {"at": "INFO", "msg": "alpha", "exc_info": 'exc\n"info"\ntb'},
+        {"a": " "},
+        {"_": " "},
+        {"a": '"'},
+        # {"a": "\\"},
+        # {"a": "\\", "b": "c"},
+        {"a": "\n"},
+        {"a": "'foo'"},
+        {"a": "", "b": "c"},
+        {"a": "1", "b": "2"},
+        {"a": "1.2", "b": "2"},
+        {"a": "1.2.3", "b": "0.2", "c": "1.0", "d": ".", "e": "1..2"},
+        {"foo.bar": "baz", "foo.blah": "blub"},
+    ],
+)
+def test_parse_logfmt_round_trip(value):
+    assert parse_logfmt(Logfmter.format_params(value)) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"a": 1},
+        {"a": 1, "b": 2},
+        {"a": 1.2, "b": 2},
+        {"a": "1.2.3", "b": 0.2, "c": 1.0, "d": ".", "e": "1..2"},
+    ],
+)
+def test_parse_logfmt_numeric_round_trip(value):
+    assert parse_logfmt(Logfmter.format_params(value), convert_numeric=True) == value
+
+
+@pytest.mark.parametrize(
+    "value,expected,kwargs",
+    [
+        ("at=INFO", {"at": "INFO"}, {}),
+        ('at="INFO"', {"at": "INFO"}, {"reverse": False}),
+        (
+            "at=INFO a=1",
+            {"levelname": "INFO", "a": "1"},
+            {"aliases": {"at": "levelname"}, "reverse": False},
+        ),
+        ("at=INFO msg=test a=1", {"at": "INFO", "msg": "test", "a": "1"}, {}),
+        ('at=INFO msg="="', {"at": "INFO", "msg": "="}, {}),
+        (
+            "at=INFO first_name=josh",
+            {"at": "INFO", "first name": "josh"},
+            {"aliases": {"first_name": "first name"}, "reverse": False},
+        ),
+        (
+            r'at=INFO msg=alpha exc_info="exc\n\"info\"\ntb"',
+            {"at": "INFO", "msg": "alpha", "exc_info": 'exc\n"info"\ntb'},
+            {},
+        ),
+        ('a=" "', {"a": " "}, {}),
+        ('_=" "', {"_": " "}, {}),
+        ('a="\\""', {"a": '"'}, {}),
+        (r'a="\\"', {"a": "\\"}, {"reverse": False}),
+        (r'a="\n"', {"a": "\n"}, {}),
+        (r"a='foo'", {"a": "'foo'"}, {}),
+        (r"a=\n", {"a": "n"}, {"reverse": False}),
+        ("a= b=c", {"a": "", "b": "c"}, {}),
+        ("a b=c", {"a": "", "b": "c"}, {"reverse": False}),
+        ("a=1", {"a": 1}, {"convert_numeric": True}),
+        ("a=1 b=2", {"a": "1", "b": "2"}, {}),
+        ("a=1 b=2", {"a": 1, "b": 2}, {"convert_numeric": True}),
+        ("a=1.2 b=2", {"a": "1.2", "b": "2"}, {}),
+        ("a=1.2 b=2", {"a": 1.2, "b": 2}, {"convert_numeric": True}),
+        (
+            "a=1.2.3 b=.2 c=1. d=. e=1..2",
+            {"a": "1.2.3", "b": 0.2, "c": 1.0, "d": ".", "e": "1..2"},
+            {"convert_numeric": True, "reverse": False},
+        ),
+        ("foo.bar=baz foo.blah=blub", {"foo.bar": "baz", "foo.blah": "blub"}, {}),
+        ("\\n=foo", {"n": "foo"}, {"reverse": False}),
+        ("a=' '", {"'": "", "a": "'"}, {"reverse": False}),
+        pytest.param(
+            "a=\n", {"a": "\n"}, {"reverse": False}, marks=pytest.mark.xfail()
+        ),
+        pytest.param(
+            "a=\\", {"a": "\\"}, {"reverse": False}, marks=pytest.mark.xfail()
+        ),
+        pytest.param(
+            "a=\\ b=c",
+            {"a": "\\", "b": "c"},
+            {"reverse": False},
+            marks=pytest.mark.xfail(),
+        ),
+    ],
+)
+def test_parse_logfmt(value, kwargs, expected):
+    reverse = kwargs.pop("reverse", True)
+    assert parse_logfmt(value, **kwargs) == expected
+    if reverse:
+        assert Logfmter.format_params(expected) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "a = b",
+    ],
+)
+def test_parse_invalid_logfmt(value):
+    with pytest.raises(ValueError):
+        print(parse_logfmt(value))
+    exe = (
+        shutil.which("golang-logfmt-echo")
+        or os.getcwd() + "/external/golang-logfmt-echo/golang-logfmt-echo"
+    )
+
+    with pytest.raises(subprocess.CalledProcessError):
+        subprocess.run(
+            [exe],
+            check=True,
+            input=value,
+            capture_output=True,
+            text=True,
+        )
