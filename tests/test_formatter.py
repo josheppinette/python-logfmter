@@ -1,5 +1,7 @@
 import logging
+import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
@@ -384,8 +386,13 @@ def test_external_tools_compatibility(value):
 
     formatted = Logfmter(keys=["at"]).format(record)
 
+    exe = (
+        shutil.which("golang-logfmt-echo")
+        or os.getcwd() + "/external/golang-logfmt-echo/golang-logfmt-echo"
+    )
+
     result = subprocess.run(
-        ["golang-logfmt-echo"],
+        [exe],
         check=False,
         input=formatted,
         capture_output=True,
