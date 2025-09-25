@@ -35,6 +35,12 @@ RESERVED: Tuple[str, ...] = (
     "threadName",
 )
 
+QUOTE_CHARS = str.maketrans(
+    "", "", " =" + "".join(chr(c) for c in list(range(0x20)) + [0x7F])
+)
+REPLACEMENTS = {chr(c): f"\\u{c:04x}" for c in list(range(0x20)) + [0x7F]}
+REPLACEMENTS.update({"\n": "\\n", "\t": "\\t", "\r": "\\r"})
+
 
 class _DefaultFormatter(logging.Formatter):
     def format(self, record):
@@ -59,13 +65,7 @@ class Logfmter(logging.Formatter):
         Process the provided string with any necessary quoting and/or escaping.
         """
         needs_dquote_escaping = '"' in value
-        needs_newline_escaping = "\n" in value
-        needs_quoting = (
-            " " in value
-            or "=" in value
-            or needs_dquote_escaping
-            or needs_newline_escaping
-        )
+        needs_quoting = needs_dquote_escaping or value.translate(QUOTE_CHARS) != value
         needs_backslash_escaping = "\\" in value and needs_quoting
 
         if needs_backslash_escaping:
@@ -74,8 +74,8 @@ class Logfmter(logging.Formatter):
         if needs_dquote_escaping:
             value = value.replace('"', '\\"')
 
-        if needs_newline_escaping:
-            value = value.replace("\n", "\\n")
+        for char, replacement in REPLACEMENTS.items():
+            value = value.replace(char, replacement)
 
         if needs_quoting:
             value = '"{}"'.format(value)

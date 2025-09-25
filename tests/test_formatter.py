@@ -16,13 +16,24 @@ STRING_ESCAPE_RULES = [
     ("=", '"="'),
     # All double quotes must be escaped.
     ('"', '"\\""'),
+    # Null bytes must be escaped and quoted
+    ("\x00", r'"\u0000"'),
+    # All whitespace chars must be escaped and quoted
+    ("\n", '"\\n"'),
+    ("\r", '"\\r"'),
+    ("\t", '"\\t"'),
+    # All other control chars must be escaped and quoted
+    ("\x07", r'"\u0007"'),
+    (
+        "".join(chr(c) for c in range(0x20) if chr(c) not in "\t\n\r"),
+        r'"\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u000b\u000c\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"',
+    ),
     # If the string requires escaping and quoting, then both
     # operations should be performed.
     (' "', '" \\""'),
     # If the string is empty, then it should be left empty.
     ("", ""),
     # If the string contains a newline, then it should be escaped.
-    ("\n", '"\\n"'),
     ("\n\n", '"\\n\\n"'),
     # If the string contains a backslash and needs to be quoted, then
     # the backslashes need to be escaped.
