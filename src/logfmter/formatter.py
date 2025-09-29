@@ -40,6 +40,9 @@ QUOTE_CHARS = str.maketrans(
 )
 REPLACEMENTS = {chr(c): f"\\u{c:04x}" for c in list(range(0x20)) + [0x7F]}
 REPLACEMENTS.update({"\n": "\\n", "\t": "\\t", "\r": "\\r"})
+KEY_REPLACEMENTS = str.maketrans(
+    {chr(c): "_" for c in list(range(0x21)) + [0x7F]} | {"\n": "\\n"}
+)
 
 
 class _DefaultFormatter(logging.Formatter):
@@ -124,7 +127,7 @@ class Logfmter(logging.Formatter):
         if not key:
             return "_"
 
-        return key.replace(" ", "_").replace("\n", "\\n")
+        return key.translate(KEY_REPLACEMENTS)
 
     @classmethod
     def get_extra(cls, record: logging.LogRecord) -> dict:
