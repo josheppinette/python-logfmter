@@ -110,6 +110,10 @@ def test_format_params(value, expected):
         ("first name", "first_name"),
         ("", "_"),
         ("first\nname", "first\\nname"),
+        (
+            "".join(map(chr, range(128))),
+            "__________\\n______________________!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~_",
+        ),
     ],
 )
 def test_normalize_key(value, expected):
