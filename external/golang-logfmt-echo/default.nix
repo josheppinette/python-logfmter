@@ -7,5 +7,5 @@ buildGoModule {
   pname = "golang-logfmt-echo";
   version = "0.0.0";
   src = ./.;
-  vendorHash = "0sjjj9z1dhilhpc8pq4154czrb79z9cm044jvn75kxcjv6v5l2m5";
+  vendorHash = "sha256-qXw5xRuTGcy9JVIMQLdadAc/V09h/HJxYrVfskA/YzQ=";
 }
