@@ -1,3 +1,12 @@
+# 0.0.12 (2026-3-11)
+
+- Improve handling of invisible control characters
+- Drop support for Python 3.9
+- Add support for Python 3.14
+- Update development dependencies
+- Improve tests
+- Improve ci/cd performance
+
 # 0.0.11 (2025-10-13)
 
 - Fix control character escaping
