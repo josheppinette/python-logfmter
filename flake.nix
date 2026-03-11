@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -21,11 +21,11 @@
       {
         devShells.default = pkgs.mkShell {
           packages = [
-            pkgs.python39
             pkgs.python310
             pkgs.python311
             pkgs.python312
             pkgs.python313
+            pkgs.python314
 
             # external
             pkgs.golang-logfmt-echo

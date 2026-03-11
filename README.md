@@ -4,7 +4,7 @@
 
 [![pre-commit](https://github.com/josheppinette/python-logfmter/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/josheppinette/python-logfmter/actions/workflows/pre-commit.yml)
 [![test](https://github.com/josheppinette/python-logfmter/actions/workflows/test.yml/badge.svg)](https://github.com/josheppinette/python-logfmter/actions/workflows/test.yml)
-[![python-3.9-3.10-3.11-3.12-3.13](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11|%203.12|%203.13-blue.svg)](.github/workflows/test.yml)
+[![python-3.10-3.11-3.12-3.13-3.14](https://img.shields.io/badge/python-3.10%20|%203.11|%203.12|%203.13|%203.14-blue.svg)](.github/workflows/test.yml)
 
 Add [logfmt](https://www.brandur.org/logfmt) structured logging using the stdlib logging module and without changing a single log call.
 

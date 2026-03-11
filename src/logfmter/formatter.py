@@ -1,15 +1,15 @@
 import logging
 import numbers
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
+from typing import Any, cast
 
-ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
+ExcInfo = tuple[type[BaseException], BaseException, TracebackType]
 
 # Reserved log record attributes cannot be overwritten. They
 # will not be included in the formatted log.
 #
 # https://docs.python.org/3/library/logging.html#logrecord-attributes
-RESERVED: Tuple[str, ...] = (
+RESERVED: tuple[str, ...] = (
     "args",
     "asctime",
     "created",
@@ -169,11 +169,11 @@ class Logfmter(logging.Formatter):
 
     def __init__(
         self,
-        keys: List[str] = ["at"],
-        mapping: Dict[str, str] = {"at": "levelname"},
-        datefmt: Optional[str] = None,
-        defaults: Optional[Dict[str, str]] = None,
-        ignored_keys: Optional[List[str]] = None,
+        keys: list[str] = ["at"],
+        mapping: dict[str, str] = {"at": "levelname"},
+        datefmt: str | None = None,
+        defaults: dict[str, str] | None = None,
+        ignored_keys: list[str] | None = None,
     ):
         super().__init__("%(message)s", datefmt)
         self.keys = [self.normalize_key(key) for key in keys]
