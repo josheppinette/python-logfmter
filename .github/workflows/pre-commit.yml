@@ -9,10 +9,12 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: DeterminateSystems/nix-installer-action@v3
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: HatsuneMiku3939/direnv-action@v1
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@v21
+      - run: nix profile add .#direnv
+      - run: |
+          direnv allow
+          direnv export gha >> "$GITHUB_ENV"
       - run: |
           pip install -r requirements/pre-commit.txt
           pre-commit run -a

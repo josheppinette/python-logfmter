@@ -19,6 +19,8 @@
         };
       in
       {
+        packages.direnv = pkgs.direnv;
+
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.python310
