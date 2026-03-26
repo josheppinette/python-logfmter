@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![Featured Awesome Python](https://img.shields.io/badge/Featured%20-Awesome%20Python-gold)](https://github.com/vinta/awesome-python?tab=readme-ov-file#logging)
 [![pre-commit](https://github.com/josheppinette/python-logfmter/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/josheppinette/python-logfmter/actions/workflows/pre-commit.yml)
 [![test](https://github.com/josheppinette/python-logfmter/actions/workflows/test.yml/badge.svg)](https://github.com/josheppinette/python-logfmter/actions/workflows/test.yml)
 [![python-3.10-3.11-3.12-3.13-3.14](https://img.shields.io/badge/python-3.10%20|%203.11|%203.12|%203.13|%203.14-blue.svg)](.github/workflows/test.yml)
